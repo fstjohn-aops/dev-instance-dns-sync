@@ -214,30 +214,6 @@ aws ec2 describe-instances \
   --output table
 ```
 
-## Architecture
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Kubernetes    │    │       AWS       │    │    Cloudflare   │
-│   CronJob       │    │      EC2        │    │       DNS       │
-│                 │    │                 │    │                 │
-│ Runs every      │───▶│ Describe        │    │ Update A        │
-│ 5 minutes       │    │ Instances       │    │ Records Only    │
-│ (dev-instance-  │    │ (filtered by    │    │ + Auto Backup   │
-│  dns-sync)      │    │  EC2Controls-   │    │                 │
-│                 │    │  Enabled: true) │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                              │
-                              ▼
-                       ┌─────────────────┐
-                       │   Recovery      │
-                       │   System        │
-                       │                 │
-                       │ Restore from    │
-                       │ JSON/CSV backup │
-                       └─────────────────┘
-```
-
 ## Security
 
 - Runs as non-root user (UID 10001)
