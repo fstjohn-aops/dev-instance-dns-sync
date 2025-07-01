@@ -11,8 +11,8 @@ metadata:
 # Pod Identity Association for DNS Records Manager
 iam:
   podIdentityAssociations:
-    - namespace: dev-instance-dns-records-manager
-      serviceAccountName: dev-instance-dns-records-manager
+    - namespace: dev-instance-dns-sync
+      serviceAccountName: dev-instance-dns-sync
       permissionPolicy:
         Version: "2012-10-17"
         Statement:

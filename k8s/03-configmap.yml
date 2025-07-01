@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: dev-instance-dns-records-manager-config
-  namespace: dev-instance-dns-records-manager
+  name: dev-instance-dns-sync-config
+  namespace: dev-instance-dns-sync
 data:
   AWS_REGION: "us-west-2"
   LOG_LEVEL: "INFO" 

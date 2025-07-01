@@ -10,11 +10,11 @@ fi
 TAG=$1
 
 # Build x86_64 image for EKS compatibility
-podman build --platform linux/amd64 -t dev-instance-dns-records-manager:latest .
+podman build --platform linux/amd64 -t dev-instance-dns-sync:latest .
 
 # Tag with provided tag
-podman tag dev-instance-dns-records-manager:latest dev-instance-dns-records-manager:$TAG
+podman tag dev-instance-dns-sync:latest dev-instance-dns-sync:$TAG
 
 # Show built images
 echo "Built images:"
-podman images dev-instance-dns-records-manager 
+podman images dev-instance-dns-sync 

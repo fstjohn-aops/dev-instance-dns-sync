@@ -132,8 +132,6 @@ class DNSManager:
         
         return changes_made
     
-
-    
     def _update_dns_record(self, record_id: str, hostname: str, ip_address: str):
         """Update an existing A record"""
         try:
