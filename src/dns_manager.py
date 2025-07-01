@@ -262,10 +262,9 @@ class DNSManager:
                 'comment': f'Updated by test environment DNS sync on {timestamp}'
             }
             
-            # DRY RUN MODE: Commented out to prevent actual changes
-            # self.cf.zones.dns_records.put(self.zone_id, record_id, data=record_data)
-            logger.info(f"[DRY RUN] Would update DNS record: {hostname} -> {ip_address}")
-            logger.info(f"[DRY RUN] Record data that would be sent: {record_data}")
+            # Update the DNS record
+            self.cf.zones.dns_records.put(self.zone_id, record_id, data=record_data)
+            logger.info(f"Updated DNS record: {hostname} -> {ip_address}")
             
         except Exception as e:
             logger.error(f"Error updating DNS record {hostname}: {str(e)}")
