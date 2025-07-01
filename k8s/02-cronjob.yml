@@ -1,0 +1,68 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: dev-instance-dns-sync
+  namespace: dev-instance-dns-sync
+  labels:
+    app: dev-instance-dns-sync
+spec:
+  schedule: "*/5 * * * *"  # Every 5 minutes
+  concurrencyPolicy: Forbid  # Don't run if previous job is still running
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: dev-instance-dns-sync
+        spec:
+          serviceAccountName: dev-instance-dns-sync
+          restartPolicy: OnFailure
+          containers:
+            - name: dev-instance-dns-sync
+              image: cr.aops.tools/aops-docker-repo/dev-instance-dns-sync:latest
+              imagePullPolicy: Always
+              env:
+                - name: AWS_REGION
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dev-instance-dns-sync-config
+                      key: AWS_REGION
+                - name: CLOUDFLARE_API_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: dev-instance-dns-sync-secret
+                      key: CLOUDFLARE_API_TOKEN
+                - name: LOG_LEVEL
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dev-instance-dns-sync-config
+                      key: LOG_LEVEL
+                - name: POD_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                - name: HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: DEPLOYMENT_NAME
+                  value: "dev-instance-dns-sync"
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "512Mi"
+              # Security hardening
+              securityContext:
+                allowPrivilegeEscalation: false
+                runAsNonRoot: true
+                runAsUser: 10001
+                capabilities:
+                  drop:
+                    - ALL
+          securityContext:
+            fsGroup: 10001 

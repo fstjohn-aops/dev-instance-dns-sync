@@ -1,0 +1,23 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: oz-eks-cluster
+  region: us-west-2
+  version: "1.32"
+  tags:
+    ManagedBy: eksctl
+
+# Pod Identity Association for DNS Records Manager
+iam:
+  podIdentityAssociations:
+    - namespace: dev-instance-dns-records-manager
+      serviceAccountName: dev-instance-dns-records-manager
+      permissionPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "ec2:DescribeInstances"
+              - "ec2:DescribeTags"
+            Resource: "*" 
