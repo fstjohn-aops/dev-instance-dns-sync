@@ -72,6 +72,18 @@ def main():
         logger.info("Fetching current DNS records from Cloudflare")
         dns_records = dns_manager.get_dns_records()
         
+        # Log DNS records as backup strings
+        dns_json = dns_manager.get_dns_records_as_json_string(dns_records)
+        dns_csv = dns_manager.get_dns_records_as_csv_string(dns_records)
+        
+        logger.info("DNS records backup (JSON format):", extra={
+            'dns_backup_json': dns_json
+        })
+        
+        logger.info("DNS records backup (CSV format):", extra={
+            'dns_backup_csv': dns_csv
+        })
+        
         # Reconcile DNS records
         logger.info("Reconciling DNS records")
         reconciliation_stats = dns_manager.reconcile_dns_records(instances, dns_records)

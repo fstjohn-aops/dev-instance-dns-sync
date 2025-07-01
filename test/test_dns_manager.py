@@ -131,22 +131,20 @@ class TestDNSManager:
             }
         }
         
-        # Mock the update and delete methods
+        # Mock the update method only (deletion is disabled)
         dns_manager._update_dns_record = Mock()
-        dns_manager._create_dns_record = Mock()
-        dns_manager._delete_dns_record = Mock()
         
         result = dns_manager.reconcile_dns_records(instances, dns_records)
         
-        # Should update test-instance-2 (IP changed) and delete orphaned record
+        # Should update test-instance-2 (IP changed) but NOT delete orphaned record
         assert result['changes_made'] is True
         dns_manager._update_dns_record.assert_called_once_with(
             'record-2',
             'test-instance-2.aopstest.com',
             '192.168.1.101'
         )
-        dns_manager._delete_dns_record.assert_called_once_with('record-3')
-        dns_manager._create_dns_record.assert_not_called()
+        # Verify no deletion occurred
+        assert result['records_deleted'] == 0
     
     @patch.dict(os.environ, {'CLOUDFLARE_API_TOKEN': 'test-token'})
     @patch('CloudFlare.CloudFlare')
@@ -181,22 +179,20 @@ class TestDNSManager:
             }
         }
         
-        # Mock the update and delete methods
+        # Mock the update method only (deletion is disabled)
         dns_manager._update_dns_record = Mock()
-        dns_manager._create_dns_record = Mock()
-        dns_manager._delete_dns_record = Mock()
         
         result = dns_manager.reconcile_dns_records(instances, dns_records)
         
-        # Should update test-instance-2 (IP changed)
+        # Should update test-instance-2 (IP changed) but NOT delete anything
         assert result['changes_made'] is True
         dns_manager._update_dns_record.assert_called_once_with(
             'record-2',
             'test-instance-2.aopstest.com',
             '192.168.1.101'
         )
-        dns_manager._delete_dns_record.assert_not_called()
-        dns_manager._create_dns_record.assert_not_called()
+        # Verify no deletion occurred
+        assert result['records_deleted'] == 0
     
     @patch.dict(os.environ, {'CLOUDFLARE_API_TOKEN': 'test-token'})
     @patch('CloudFlare.CloudFlare')
@@ -244,27 +240,25 @@ class TestDNSManager:
             }
         }
         
-        # Mock the update and delete methods
+        # Mock the update method only (deletion is disabled)
         dns_manager._update_dns_record = Mock()
-        dns_manager._create_dns_record = Mock()
-        dns_manager._delete_dns_record = Mock()
         
         result = dns_manager.reconcile_dns_records(instances, dns_records)
         
-        # Should update test-instance-2 (IP changed) and delete orphaned record
+        # Should update test-instance-2 (IP changed) but NOT delete orphaned record
         assert result['changes_made'] is True
         dns_manager._update_dns_record.assert_called_once_with(
             'record-2',
             'test-instance-2.aopstest.com',
             '192.168.1.101'
         )
-        dns_manager._delete_dns_record.assert_called_once_with('record-4')
-        dns_manager._create_dns_record.assert_not_called()
+        # Verify no deletion occurred
+        assert result['records_deleted'] == 0
     
     @patch.dict(os.environ, {'CLOUDFLARE_API_TOKEN': 'test-token'})
     @patch('CloudFlare.CloudFlare')
     def test_reconcile_dns_records_server_suffix_orphaned_detection(self, mock_cloudflare):
-        """Test that orphaned DNS records are correctly detected when instances have -server suffix"""
+        """Test that orphaned DNS records are NOT deleted (deletion is disabled)"""
         mock_cf = Mock()
         mock_cloudflare.return_value = mock_cf
         
@@ -287,34 +281,27 @@ class TestDNSManager:
             },
             'test-instance-2.aopstest.com': {
                 'id': 'record-2',
-                'content': '192.168.1.200',  # Should be deleted (orphaned)
+                'content': '192.168.1.200',  # Would be orphaned but deletion is disabled
                 'name': 'test-instance-2.aopstest.com',
                 'type': 'A'
             },
             'test-instance-3-server.aopstest.com': {
                 'id': 'record-3',
-                'content': '192.168.1.300',  # Should be deleted (orphaned, DNS has -server but no matching instance)
+                'content': '192.168.1.300',  # Would be orphaned but deletion is disabled
                 'name': 'test-instance-3-server.aopstest.com',
                 'type': 'A'
             }
         }
         
-        # Mock the update and delete methods
+        # Mock the update method only (deletion is disabled)
         dns_manager._update_dns_record = Mock()
-        dns_manager._create_dns_record = Mock()
-        dns_manager._delete_dns_record = Mock()
         
         result = dns_manager.reconcile_dns_records(instances, dns_records)
         
-        # Should delete both orphaned records
-        assert result['changes_made'] is True
-        assert result['records_deleted'] == 2
+        # Should NOT delete orphaned records (deletion is disabled)
+        assert result['changes_made'] is False  # No changes since no updates needed
+        assert result['records_deleted'] == 0
         dns_manager._update_dns_record.assert_not_called()
-        dns_manager._create_dns_record.assert_not_called()
-        # Check that both orphaned records were deleted
-        dns_manager._delete_dns_record.assert_any_call('record-2')
-        dns_manager._delete_dns_record.assert_any_call('record-3')
-        assert dns_manager._delete_dns_record.call_count == 2
     
     @patch.dict(os.environ, {'CLOUDFLARE_API_TOKEN': 'test-token'})
     @patch('CloudFlare.CloudFlare')
@@ -363,10 +350,8 @@ class TestDNSManager:
             }
         }
         
-        # Mock the update and delete methods
+        # Mock the update method only (deletion is disabled)
         dns_manager._update_dns_record = Mock()
-        dns_manager._create_dns_record = Mock()
-        dns_manager._delete_dns_record = Mock()
         
         result = dns_manager.reconcile_dns_records(instances, dns_records)
         
@@ -375,6 +360,4 @@ class TestDNSManager:
         assert result['records_updated'] == 0
         assert result['records_unchanged'] == 4
         assert result['records_deleted'] == 0
-        dns_manager._update_dns_record.assert_not_called()
-        dns_manager._create_dns_record.assert_not_called()
-        dns_manager._delete_dns_record.assert_not_called() 
+        dns_manager._update_dns_record.assert_not_called() 

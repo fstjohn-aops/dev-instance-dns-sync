@@ -1,9 +1,14 @@
 """
 DNS Manager for Cloudflare DNS operations
+
+SAFETY NOTICE: This application will NEVER delete DNS records under any circumstances.
+Only updates to existing records are performed. This is a deliberate safety measure
+to prevent accidental data loss.
 """
 
 import os
 import logging
+import csv
 from typing import Dict
 from datetime import datetime, timezone
 import CloudFlare
@@ -105,9 +110,90 @@ class DNSManager:
             logger.error(f"Error fetching DNS records: {str(e)}")
             raise
     
+    def get_dns_records_as_json_string(self, dns_records: Dict[str, Dict]) -> str:
+        """
+        Convert DNS records to JSON string for logging/backup purposes
+        
+        Args:
+            dns_records: Dict mapping hostname to DNS record data
+            
+        Returns:
+            JSON string representation of DNS records
+        """
+        try:
+            import json
+            from datetime import datetime, timezone
+            
+            # Convert to a more compact format for logging
+            records_list = []
+            for hostname, record_data in dns_records.items():
+                records_list.append({
+                    'hostname': hostname,
+                    'ip_address': record_data['content'],
+                    'record_id': record_data['id'],
+                    'type': record_data['type'],
+                    'ttl': record_data.get('ttl', 60),
+                    'proxied': record_data.get('proxied', False)
+                })
+            
+            # Add metadata
+            backup_data = {
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'domain': CLOUDFLARE_DOMAIN,
+                'total_records': len(records_list),
+                'records': records_list
+            }
+            
+            return json.dumps(backup_data, indent=2)
+            
+        except Exception as e:
+            logger.error(f"Error converting DNS records to JSON: {str(e)}")
+            raise
+    
+    def get_dns_records_as_csv_string(self, dns_records: Dict[str, Dict]) -> str:
+        """
+        Convert DNS records to CSV string for logging/backup purposes
+        
+        Args:
+            dns_records: Dict mapping hostname to DNS record data
+            
+        Returns:
+            CSV string representation of DNS records
+        """
+        try:
+            import io
+            
+            # Create CSV string in memory
+            output = io.StringIO()
+            fieldnames = ['hostname', 'ip_address', 'record_id', 'type', 'ttl', 'proxied']
+            writer = csv.DictWriter(output, fieldnames=fieldnames)
+            
+            writer.writeheader()
+            for hostname, record_data in dns_records.items():
+                writer.writerow({
+                    'hostname': hostname,
+                    'ip_address': record_data['content'],
+                    'record_id': record_data['id'],
+                    'type': record_data['type'],
+                    'ttl': record_data.get('ttl', 60),
+                    'proxied': record_data.get('proxied', False)
+                })
+            
+            csv_string = output.getvalue()
+            output.close()
+            
+            return csv_string
+            
+        except Exception as e:
+            logger.error(f"Error converting DNS records to CSV: {str(e)}")
+            raise
+    
     def reconcile_dns_records(self, instances: Dict[str, str], dns_records: Dict[str, Dict]) -> Dict:
         """
         Update DNS records to match EC2 instance IPs (only for existing records)
+        
+        This method will ONLY update existing DNS records. It will NEVER delete any DNS records
+        under any circumstances. This is a safety measure to prevent accidental data loss.
         
         Args:
             instances: Dict mapping instance name to public IP
@@ -154,34 +240,6 @@ class DNSManager:
                 logger.debug(f"No DNS record exists for instance: {expected_hostname} -> {public_ip} (skipping)")
                 instances_without_records += 1
         
-        # Check for orphaned DNS records (records that don't correspond to any instance)
-        records_deleted = 0
-        for hostname, record_data in dns_records.items():
-            # Extract instance name from hostname (remove domain suffix)
-            dns_instance_name = hostname.replace(f'.{CLOUDFLARE_DOMAIN}', '')
-            
-            # Check if this DNS record corresponds to any instance
-            # Compare DNS name with instance names (removing -server suffix if present)
-            instance_found = False
-            for instance_name in instances.keys():
-                if instance_name.removesuffix('-server') == dns_instance_name:
-                    instance_found = True
-                    break
-            
-            if not instance_found:
-                logger.info(f"Deleting orphaned DNS record: {hostname}", 
-                           extra={
-                               'dns_change': {
-                                   'action': 'delete',
-                                   'hostname': hostname,
-                                   'ip': record_data['content'],
-                                   'reason': 'orphaned_record'
-                               }
-                           })
-                self._delete_dns_record(record_data['id'])
-                changes_made = True
-                records_deleted += 1
-        
         return {
             'changes_made': changes_made,
             'instances_processed': len(instances),
@@ -189,7 +247,7 @@ class DNSManager:
             'records_updated': records_updated,
             'records_unchanged': records_unchanged,
             'instances_without_records': instances_without_records,
-            'records_deleted': records_deleted
+            'records_deleted': 0  # Always 0 - deletion is disabled
         }
     
     def _update_dns_record(self, record_id: str, hostname: str, ip_address: str):
@@ -212,14 +270,3 @@ class DNSManager:
             logger.error(f"Error updating DNS record {hostname}: {str(e)}")
             raise
     
-    def _delete_dns_record(self, record_id: str):
-        """Delete an existing A record"""
-        try:
-            self.cf.zones.dns_records.delete(self.zone_id, record_id)
-            logger.info(f"Deleted DNS record: {record_id}")
-            
-        except Exception as e:
-            logger.error(f"Error deleting DNS record {record_id}: {str(e)}")
-            raise
-    
- 
