@@ -123,7 +123,9 @@ class DNSManager:
         
         for instance_name, public_ip in instances.items():
             # Handle -server suffix in instance names
-            expected_hostname = instance_name.replace(f'.{CLOUDFLARE_DOMAIN}-server', f'.{CLOUDFLARE_DOMAIN}')
+            # Remove -server suffix if present for DNS record lookup
+            dns_instance_name = instance_name.removesuffix('-server')
+            expected_hostname = f"{dns_instance_name}.{CLOUDFLARE_DOMAIN}"
             
             if expected_hostname in dns_records:
                 current_ip = dns_records[expected_hostname]['content']
@@ -152,13 +154,42 @@ class DNSManager:
                 logger.debug(f"No DNS record exists for instance: {expected_hostname} -> {public_ip} (skipping)")
                 instances_without_records += 1
         
+        # Check for orphaned DNS records (records that don't correspond to any instance)
+        records_deleted = 0
+        for hostname, record_data in dns_records.items():
+            # Extract instance name from hostname (remove domain suffix)
+            dns_instance_name = hostname.replace(f'.{CLOUDFLARE_DOMAIN}', '')
+            
+            # Check if this DNS record corresponds to any instance
+            # Compare DNS name with instance names (removing -server suffix if present)
+            instance_found = False
+            for instance_name in instances.keys():
+                if instance_name.removesuffix('-server') == dns_instance_name:
+                    instance_found = True
+                    break
+            
+            if not instance_found:
+                logger.info(f"Deleting orphaned DNS record: {hostname}", 
+                           extra={
+                               'dns_change': {
+                                   'action': 'delete',
+                                   'hostname': hostname,
+                                   'ip': record_data['content'],
+                                   'reason': 'orphaned_record'
+                               }
+                           })
+                self._delete_dns_record(record_data['id'])
+                changes_made = True
+                records_deleted += 1
+        
         return {
             'changes_made': changes_made,
             'instances_processed': len(instances),
             'dns_records_checked': len(dns_records),
             'records_updated': records_updated,
             'records_unchanged': records_unchanged,
-            'instances_without_records': instances_without_records
+            'instances_without_records': instances_without_records,
+            'records_deleted': records_deleted
         }
     
     def _update_dns_record(self, record_id: str, hostname: str, ip_address: str):
@@ -179,6 +210,16 @@ class DNSManager:
             
         except Exception as e:
             logger.error(f"Error updating DNS record {hostname}: {str(e)}")
+            raise
+    
+    def _delete_dns_record(self, record_id: str):
+        """Delete an existing A record"""
+        try:
+            self.cf.zones.dns_records.delete(self.zone_id, record_id)
+            logger.info(f"Deleted DNS record: {record_id}")
+            
+        except Exception as e:
+            logger.error(f"Error deleting DNS record {record_id}: {str(e)}")
             raise
     
  
