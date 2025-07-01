@@ -7,7 +7,7 @@ metadata:
     app: dev-instance-dns-sync
 spec:
   suspend: false  # Suspend the cron job
-  schedule: "*/15 * * * *"  # Every 5 minutes
+  schedule: "*/5 * * * *"  # Every 5 minutes
   concurrencyPolicy: Forbid  # Don't run if previous job is still running
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
