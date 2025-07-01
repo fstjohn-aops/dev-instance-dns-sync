@@ -55,6 +55,13 @@ class AWSClient:
                         logger.warning(f"Instance {instance_name} has no public IP")
             
             logger.info(f"Found {len(instances)} instances with public IPs")
+            
+            # Log all instances found
+            instances_array = [{"name": name, "ip": ip} for name, ip in instances.items()]
+            logger.info("EC2 instances found", extra={
+                'instances': instances_array
+            })
+            
             return instances
             
         except Exception as e:

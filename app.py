@@ -26,6 +26,17 @@ class StructuredFormatter(logging.Formatter):
             'namespace': os.environ.get('POD_NAMESPACE', 'unknown'),
             'deployment': os.environ.get('DEPLOYMENT_NAME', 'unknown')
         }
+        
+        # Add extra fields if present
+        if hasattr(record, 'dns_change'):
+            log_data['dns_change'] = record.dns_change
+        if hasattr(record, 'summary'):
+            log_data['summary'] = record.summary
+        if hasattr(record, 'instances'):
+            log_data['instances'] = record.instances
+        if hasattr(record, 'dns_records'):
+            log_data['dns_records'] = record.dns_records
+            
         return json.dumps(log_data)
 
 # Configure logging
@@ -63,9 +74,14 @@ def main():
         
         # Reconcile DNS records
         logger.info("Reconciling DNS records")
-        changes_made = dns_manager.reconcile_dns_records(instances, dns_records)
+        reconciliation_stats = dns_manager.reconcile_dns_records(instances, dns_records)
         
-        if changes_made:
+        # Log summary statistics
+        logger.info("DNS reconciliation summary", extra={
+            'summary': reconciliation_stats
+        })
+        
+        if reconciliation_stats['changes_made']:
             logger.info("DNS records updated successfully")
         else:
             logger.info("No DNS record changes needed")

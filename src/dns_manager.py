@@ -92,13 +92,20 @@ class DNSManager:
                 page += 1
             
             logger.info(f"Found {len(dns_records)} DNS A records across {page} pages")
+            
+            # Log all DNS records found
+            dns_records_array = [{"name": hostname, "ip": record['content']} for hostname, record in dns_records.items()]
+            logger.info("DNS records found", extra={
+                'dns_records': dns_records_array
+            })
+            
             return dns_records
             
         except Exception as e:
             logger.error(f"Error fetching DNS records: {str(e)}")
             raise
     
-    def reconcile_dns_records(self, instances: Dict[str, str], dns_records: Dict[str, Dict]) -> bool:
+    def reconcile_dns_records(self, instances: Dict[str, str], dns_records: Dict[str, Dict]) -> Dict:
         """
         Update DNS records to match EC2 instance IPs (only for existing records)
         
@@ -107,9 +114,12 @@ class DNSManager:
             dns_records: Dict mapping hostname to DNS record data
             
         Returns:
-            True if changes were made, False otherwise
+            Dict with statistics about the reconciliation
         """
         changes_made = False
+        records_updated = 0
+        records_unchanged = 0
+        instances_without_records = 0
         
         for instance_name, public_ip in instances.items():
             # Handle -server suffix in instance names
@@ -118,19 +128,38 @@ class DNSManager:
             if expected_hostname in dns_records:
                 current_ip = dns_records[expected_hostname]['content']
                 if current_ip != public_ip:
-                    logger.info(f"Updating DNS record: {expected_hostname} {current_ip} -> {public_ip}")
+                    logger.info(f"Updating DNS record: {expected_hostname} {current_ip} -> {public_ip}", 
+                               extra={
+                                   'dns_change': {
+                                       'action': 'update',
+                                       'hostname': expected_hostname,
+                                       'old_ip': current_ip,
+                                       'new_ip': public_ip,
+                                       'instance_name': instance_name
+                                   }
+                               })
                     self._update_dns_record(
                         dns_records[expected_hostname]['id'],
                         expected_hostname,
                         public_ip
                     )
                     changes_made = True
+                    records_updated += 1
                 else:
                     logger.debug(f"DNS record up to date: {expected_hostname} -> {public_ip}")
+                    records_unchanged += 1
             else:
                 logger.debug(f"No DNS record exists for instance: {expected_hostname} -> {public_ip} (skipping)")
+                instances_without_records += 1
         
-        return changes_made
+        return {
+            'changes_made': changes_made,
+            'instances_processed': len(instances),
+            'dns_records_checked': len(dns_records),
+            'records_updated': records_updated,
+            'records_unchanged': records_unchanged,
+            'instances_without_records': instances_without_records
+        }
     
     def _update_dns_record(self, record_id: str, hostname: str, ip_address: str):
         """Update an existing A record"""
