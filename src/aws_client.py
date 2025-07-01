@@ -25,34 +25,55 @@ class AWSClient:
             Dict mapping instance name to public IP
         """
         try:
-            # Get only running instances with EC2ControlsEnabled: true tag
-            response = self.ec2_client.describe_instances(
-                Filters=[
-                    {
-                        'Name': 'instance-state-name',
-                        'Values': ['running']
-                    },
-                    {
-                        'Name': 'tag:EC2ControlsEnabled',
-                        'Values': ['true']
-                    }
-                ]
-            )
-            
             instances = {}
+            next_token = None
             
-            for reservation in response['Reservations']:
-                for instance in reservation['Instances']:
-                    instance_id = instance['InstanceId']
-                    instance_name = self._get_instance_name(instance)
-                    
-                    # Get public IP if available
-                    public_ip = instance.get('PublicIpAddress')
-                    
-                    if instance_name and public_ip:
-                        instances[instance_name] = public_ip
-                    elif instance_name:
-                        logger.warning(f"Instance {instance_name} has no public IP")
+            while True:
+                # Get only running instances with EC2ControlsEnabled: true tag
+                if next_token:
+                    response = self.ec2_client.describe_instances(
+                        Filters=[
+                            {
+                                'Name': 'instance-state-name',
+                                'Values': ['running']
+                            },
+                            {
+                                'Name': 'tag:EC2ControlsEnabled',
+                                'Values': ['true']
+                            }
+                        ],
+                        NextToken=next_token
+                    )
+                else:
+                    response = self.ec2_client.describe_instances(
+                        Filters=[
+                            {
+                                'Name': 'instance-state-name',
+                                'Values': ['running']
+                            },
+                            {
+                                'Name': 'tag:EC2ControlsEnabled',
+                                'Values': ['true']
+                            }
+                        ]
+                    )
+                
+                for reservation in response['Reservations']:
+                    for instance in reservation['Instances']:
+                        instance_id = instance['InstanceId']
+                        instance_name = self._get_instance_name(instance)
+                        
+                        # Get public IP if available
+                        public_ip = instance.get('PublicIpAddress')
+                        
+                        if instance_name and public_ip:
+                            instances[instance_name] = public_ip
+                        elif instance_name:
+                            logger.warning(f"Instance {instance_name} has no public IP")
+                
+                next_token = response.get('NextToken')
+                if not next_token:
+                    break
             
             logger.info(f"Found {len(instances)} instances with public IPs")
             

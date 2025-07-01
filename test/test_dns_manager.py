@@ -7,6 +7,12 @@ import os
 from unittest.mock import Mock, patch
 from src.dns_manager import DNSManager
 
+#
+# IMPORTANT: These tests are designed to ensure the DNS parsing logic (especially handling of the '-server' suffix)
+# matches the intended production behavior. Do NOT change these tests unless the core functionality of the script
+# fundamentally changes. If the parsing logic is updated, update these tests to match the new intended behavior.
+#
+
 class TestDNSManager:
     """Test cases for DNSManager"""
     
@@ -95,7 +101,9 @@ class TestDNSManager:
     @patch.dict(os.environ, {'CLOUDFLARE_API_TOKEN': 'test-token'})
     @patch('CloudFlare.CloudFlare')
     def test_reconcile_dns_records(self, mock_cloudflare):
-        """Test DNS record reconciliation"""
+        """
+        Test that instance names without '-server' suffix map directly to DNS record names.
+        """
         mock_cf = Mock()
         mock_cloudflare.return_value = mock_cf
         
@@ -111,22 +119,22 @@ class TestDNSManager:
         }
         
         dns_records = {
-            'test-instance-1.aopstest.com': {
+            'test-instance-1': {
                 'id': 'record-1',
                 'content': '192.168.1.100',  # Same IP
-                'name': 'test-instance-1.aopstest.com',
+                'name': 'test-instance-1',
                 'type': 'A'
             },
-            'test-instance-2.aopstest.com': {
+            'test-instance-2': {
                 'id': 'record-2',
                 'content': '192.168.1.200',  # Different IP
-                'name': 'test-instance-2.aopstest.com',
+                'name': 'test-instance-2',
                 'type': 'A'
             },
-            'orphaned-instance.aopstest.com': {
+            'orphaned-instance': {
                 'id': 'record-3',
                 'content': '192.168.1.300',
-                'name': 'orphaned-instance.aopstest.com',
+                'name': 'orphaned-instance',
                 'type': 'A'
             }
         }
@@ -140,7 +148,7 @@ class TestDNSManager:
         assert result['changes_made'] is True
         dns_manager._update_dns_record.assert_called_once_with(
             'record-2',
-            'test-instance-2.aopstest.com',
+            'test-instance-2',
             '192.168.1.101'
         )
         # Verify no deletion occurred
@@ -149,7 +157,9 @@ class TestDNSManager:
     @patch.dict(os.environ, {'CLOUDFLARE_API_TOKEN': 'test-token'})
     @patch('CloudFlare.CloudFlare')
     def test_reconcile_dns_records_with_server_suffix(self, mock_cloudflare):
-        """Test DNS record reconciliation with -server suffix instances"""
+        """
+        Test that instance names with '-server' suffix map to DNS record names with the suffix removed.
+        """
         mock_cf = Mock()
         mock_cloudflare.return_value = mock_cf
         
@@ -165,16 +175,16 @@ class TestDNSManager:
         }
         
         dns_records = {
-            'test-instance-1.aopstest.com': {
+            'test-instance-1': {
                 'id': 'record-1',
                 'content': '192.168.1.100',  # Same IP
-                'name': 'test-instance-1.aopstest.com',
+                'name': 'test-instance-1',
                 'type': 'A'
             },
-            'test-instance-2.aopstest.com': {
+            'test-instance-2': {
                 'id': 'record-2',
                 'content': '192.168.1.200',  # Different IP
-                'name': 'test-instance-2.aopstest.com',
+                'name': 'test-instance-2',
                 'type': 'A'
             }
         }
@@ -188,7 +198,7 @@ class TestDNSManager:
         assert result['changes_made'] is True
         dns_manager._update_dns_record.assert_called_once_with(
             'record-2',
-            'test-instance-2.aopstest.com',
+            'test-instance-2',
             '192.168.1.101'
         )
         # Verify no deletion occurred
@@ -197,7 +207,9 @@ class TestDNSManager:
     @patch.dict(os.environ, {'CLOUDFLARE_API_TOKEN': 'test-token'})
     @patch('CloudFlare.CloudFlare')
     def test_reconcile_dns_records_mixed_server_suffix(self, mock_cloudflare):
-        """Test DNS record reconciliation with mixed -server and non-server instances"""
+        """
+        Test that both '-server' and non '-server' instance names are parsed correctly and matched to DNS records.
+        """
         mock_cf = Mock()
         mock_cloudflare.return_value = mock_cf
         
@@ -214,28 +226,28 @@ class TestDNSManager:
         }
         
         dns_records = {
-            'test-instance-1.aopstest.com': {
+            'test-instance-1': {
                 'id': 'record-1',
                 'content': '192.168.1.100',  # Same IP
-                'name': 'test-instance-1.aopstest.com',
+                'name': 'test-instance-1',
                 'type': 'A'
             },
-            'test-instance-2.aopstest.com': {
+            'test-instance-2': {
                 'id': 'record-2',
                 'content': '192.168.1.200',  # Different IP
-                'name': 'test-instance-2.aopstest.com',
+                'name': 'test-instance-2',
                 'type': 'A'
             },
-            'test-instance-3.aopstest.com': {
+            'test-instance-3': {
                 'id': 'record-3',
                 'content': '192.168.1.102',  # Same IP
-                'name': 'test-instance-3.aopstest.com',
+                'name': 'test-instance-3',
                 'type': 'A'
             },
-            'orphaned-instance.aopstest.com': {
+            'orphaned-instance': {
                 'id': 'record-4',
                 'content': '192.168.1.300',
-                'name': 'orphaned-instance.aopstest.com',
+                'name': 'orphaned-instance',
                 'type': 'A'
             }
         }
@@ -249,7 +261,7 @@ class TestDNSManager:
         assert result['changes_made'] is True
         dns_manager._update_dns_record.assert_called_once_with(
             'record-2',
-            'test-instance-2.aopstest.com',
+            'test-instance-2',
             '192.168.1.101'
         )
         # Verify no deletion occurred
@@ -258,7 +270,9 @@ class TestDNSManager:
     @patch.dict(os.environ, {'CLOUDFLARE_API_TOKEN': 'test-token'})
     @patch('CloudFlare.CloudFlare')
     def test_reconcile_dns_records_server_suffix_orphaned_detection(self, mock_cloudflare):
-        """Test that orphaned DNS records are NOT deleted (deletion is disabled)"""
+        """
+        Test that orphaned DNS records are NOT deleted (deletion is disabled, only parsing is checked).
+        """
         mock_cf = Mock()
         mock_cloudflare.return_value = mock_cf
         
@@ -273,22 +287,22 @@ class TestDNSManager:
         }
         
         dns_records = {
-            'test-instance-1.aopstest.com': {
+            'test-instance-1': {
                 'id': 'record-1',
                 'content': '192.168.1.100',  # Same IP
-                'name': 'test-instance-1.aopstest.com',
+                'name': 'test-instance-1',
                 'type': 'A'
             },
-            'test-instance-2.aopstest.com': {
+            'test-instance-2': {
                 'id': 'record-2',
                 'content': '192.168.1.200',  # Would be orphaned but deletion is disabled
-                'name': 'test-instance-2.aopstest.com',
+                'name': 'test-instance-2',
                 'type': 'A'
             },
-            'test-instance-3-server.aopstest.com': {
+            'test-instance-3-server': {
                 'id': 'record-3',
                 'content': '192.168.1.300',  # Would be orphaned but deletion is disabled
-                'name': 'test-instance-3-server.aopstest.com',
+                'name': 'test-instance-3-server',
                 'type': 'A'
             }
         }
@@ -306,7 +320,9 @@ class TestDNSManager:
     @patch.dict(os.environ, {'CLOUDFLARE_API_TOKEN': 'test-token'})
     @patch('CloudFlare.CloudFlare')
     def test_reconcile_dns_records_server_suffix_edge_cases(self, mock_cloudflare):
-        """Test DNS record reconciliation with edge cases for -server suffix"""
+        """
+        Test edge cases for '-server' suffix parsing (e.g., 'server', 'test-server-server', etc.).
+        """
         mock_cf = Mock()
         mock_cloudflare.return_value = mock_cf
         
@@ -324,28 +340,28 @@ class TestDNSManager:
         }
         
         dns_records = {
-            'server.aopstest.com': {
+            'server': {
                 'id': 'record-1',
                 'content': '192.168.1.100',  # Same IP
-                'name': 'server.aopstest.com',
+                'name': 'server',
                 'type': 'A'
             },
-            'test.aopstest.com': {
+            'test': {
                 'id': 'record-2',
                 'content': '192.168.1.101',  # Same IP (test-server -> test)
-                'name': 'test.aopstest.com',
+                'name': 'test',
                 'type': 'A'
             },
-            'test-server.aopstest.com': {
+            'test-server': {
                 'id': 'record-3',
                 'content': '192.168.1.102',  # Same IP (test-server-server -> test-server)
-                'name': 'test-server.aopstest.com',
+                'name': 'test-server',
                 'type': 'A'
             },
-            'test-instance.aopstest.com': {
+            'test-instance': {
                 'id': 'record-4',
                 'content': '192.168.1.103',  # Same IP
-                'name': 'test-instance.aopstest.com',
+                'name': 'test-instance',
                 'type': 'A'
             }
         }

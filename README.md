@@ -9,7 +9,15 @@ This service addresses the issue where EC2 instances get new public IPs when the
 1. Fetches all EC2 instances and their public IPs from AWS
 2. Retrieves current DNS A records from Cloudflare
 3. Compares and reconciles any discrepancies
-4. Creates, updates, or deletes DNS records as needed
+4. **Updates existing DNS records only** - never creates or deletes records
+
+## Safety Features
+
+**This application will NEVER create or delete DNS records under any circumstances.** It only updates existing DNS records when IP addresses change. This is a deliberate safety measure to prevent accidental data loss.
+
+- ✅ **Updates** existing DNS records when IPs change
+- ❌ **Never creates** new DNS records
+- ❌ **Never deletes** any DNS records
 
 ## Key Assumptions
 
@@ -17,12 +25,14 @@ This service addresses the issue where EC2 instances get new public IPs when the
 - Only manages records where the hostname matches the EC2 instance name (format: `<instance-name>.aopstest.com`)
 - Operates in a single AWS region and account (same as the EC2 instances)
 - Uses Cloudflare for DNS management
+- **Only updates existing DNS records** - instances without DNS records are skipped
 
 ## Prerequisites
 
 - AWS EKS cluster with pod identity configured
 - Cloudflare API token with DNS management permissions
 - EC2 instances tagged with `Name` tags
+- **Existing DNS A records** for the instances you want to manage
 
 ## Setup
 
@@ -79,7 +89,7 @@ You need a Cloudflare API token with the following permissions:
 
 ### DNS Record Settings
 
-- TTL: 300 seconds (5 minutes)
+- TTL: 60 seconds (1 minute)
 - Proxied: False (DNS only, not proxied through Cloudflare)
 
 ## Development
@@ -110,8 +120,9 @@ python app.py
 The service logs all operations in structured JSON format. Key log events:
 
 - Instance discovery and IP mapping
-- DNS record creation, updates, and deletions
+- DNS record updates (only)
 - Reconciliation summary
+- Instances without DNS records (skipped)
 
 ## Troubleshooting
 
@@ -120,6 +131,7 @@ The service logs all operations in structured JSON format. Key log events:
 1. **Missing Cloudflare API Token**: Ensure the `CLOUDFLARE_API_TOKEN` environment variable is set
 2. **AWS Permissions**: Verify the pod identity has `ec2:DescribeInstances` and `ec2:DescribeTags` permissions
 3. **Cloudflare Permissions**: Ensure the API token has DNS management permissions for the zone
+4. **No DNS Records Created**: The application only updates existing records - you must manually create DNS records first
 
 ### Checking CronJob Status
 
@@ -141,8 +153,8 @@ kubectl logs -n dev-instance-dns-records-manager job/dev-instance-dns-records-ma
 │   Kubernetes    │    │       AWS       │    │    Cloudflare   │
 │   CronJob       │    │      EC2        │    │       DNS       │
 │                 │    │                 │    │                 │
-│ Runs every      │───▶│ Describe        │    │ Manage A        │
-│ 5 minutes       │    │ Instances       │    │ Records         │
+│ Runs every      │───▶│ Describe        │    │ Update A        │
+│ 5 minutes       │    │ Instances       │    │ Records Only    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
@@ -151,4 +163,5 @@ kubectl logs -n dev-instance-dns-records-manager job/dev-instance-dns-records-ma
 - Runs as non-root user (UID 10001)
 - Uses pod identity for AWS authentication
 - Minimal required permissions
-- No ingress (outgoing requests only) 
+- No ingress (outgoing requests only)
+- **Update-only operations** prevent accidental data loss 

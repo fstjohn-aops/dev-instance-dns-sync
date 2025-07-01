@@ -36,6 +36,10 @@ class StructuredFormatter(logging.Formatter):
             log_data['instances'] = record.instances
         if hasattr(record, 'dns_records'):
             log_data['dns_records'] = record.dns_records
+        if hasattr(record, 'dns_backup_json'):
+            log_data['dns_backup_json'] = record.dns_backup_json
+        if hasattr(record, 'dns_backup_csv'):
+            log_data['dns_backup_csv'] = record.dns_backup_csv
             
         return json.dumps(log_data)
 

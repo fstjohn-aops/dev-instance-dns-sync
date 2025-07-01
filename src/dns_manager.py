@@ -210,8 +210,7 @@ class DNSManager:
         for instance_name, public_ip in instances.items():
             # Handle -server suffix in instance names
             # Remove -server suffix if present for DNS record lookup
-            dns_instance_name = instance_name.removesuffix('-server')
-            expected_hostname = f"{dns_instance_name}.{CLOUDFLARE_DOMAIN}"
+            expected_hostname = instance_name.removesuffix('-server')
             
             if expected_hostname in dns_records:
                 current_ip = dns_records[expected_hostname]['content']
@@ -263,8 +262,10 @@ class DNSManager:
                 'comment': f'Updated by test environment DNS sync on {timestamp}'
             }
             
-            self.cf.zones.dns_records.put(self.zone_id, record_id, data=record_data)
-            logger.info(f"Updated DNS record: {hostname} -> {ip_address}")
+            # DRY RUN MODE: Commented out to prevent actual changes
+            # self.cf.zones.dns_records.put(self.zone_id, record_id, data=record_data)
+            logger.info(f"[DRY RUN] Would update DNS record: {hostname} -> {ip_address}")
+            logger.info(f"[DRY RUN] Record data that would be sent: {record_data}")
             
         except Exception as e:
             logger.error(f"Error updating DNS record {hostname}: {str(e)}")
