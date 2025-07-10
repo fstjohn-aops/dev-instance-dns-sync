@@ -260,14 +260,8 @@ class DNSManager:
                 'ttl': 60,  # 1 minute TTL
                 'proxied': False,  # DNS only, not proxied
                 'tags': [
-                    {
-                        'name': 'updated-by',
-                        'value': 'test-environment-dns-sync'
-                    },
-                    {
-                        'name': 'last-updated',
-                        'value': timestamp
-                    }
+                    'updated-by:test-environment-dns-sync',
+                    f'last-updated:{timestamp}'
                 ]
             }
             

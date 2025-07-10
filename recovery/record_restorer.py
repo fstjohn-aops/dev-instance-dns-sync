@@ -30,14 +30,8 @@ class RecordRestorer:
                     if not dry_run:
                         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
                         tags = [
-                            {
-                                'name': 'updated-by',
-                                'value': 'recovery-script'
-                            },
-                            {
-                                'name': 'last-updated',
-                                'value': timestamp
-                            }
+                            'updated-by:recovery-script',
+                            f'last-updated:{timestamp}'
                         ]
                         self.cloudflare_client.update_record(
                             existing_records[hostname]['id'],
@@ -57,14 +51,8 @@ class RecordRestorer:
                 if not dry_run:
                     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
                     tags = [
-                        {
-                            'name': 'created-by',
-                            'value': 'recovery-script'
-                        },
-                        {
-                            'name': 'created-on',
-                            'value': timestamp
-                        }
+                        'created-by:recovery-script',
+                        f'created-on:{timestamp}'
                     ]
                     self.cloudflare_client.create_record(
                         hostname,
