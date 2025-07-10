@@ -28,14 +28,24 @@ class RecordRestorer:
                 existing_ip = existing_records[hostname]['content']
                 if existing_ip != ip_address:
                     if not dry_run:
-                        comment = f"Updated by recovery script on {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}"
+                        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+                        tags = [
+                            {
+                                'name': 'updated-by',
+                                'value': 'recovery-script'
+                            },
+                            {
+                                'name': 'last-updated',
+                                'value': timestamp
+                            }
+                        ]
                         self.cloudflare_client.update_record(
                             existing_records[hostname]['id'],
                             hostname,
                             ip_address,
                             ttl,
                             proxied,
-                            comment
+                            tags
                         )
                     else:
                         logger.info(f"[DRY-RUN] Would update: {hostname} {existing_ip} -> {ip_address}")
@@ -45,13 +55,23 @@ class RecordRestorer:
                     unchanged_count += 1
             else:
                 if not dry_run:
-                    comment = f"Created by recovery script on {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}"
+                    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+                    tags = [
+                        {
+                            'name': 'created-by',
+                            'value': 'recovery-script'
+                        },
+                        {
+                            'name': 'created-on',
+                            'value': timestamp
+                        }
+                    ]
                     self.cloudflare_client.create_record(
                         hostname,
                         ip_address,
                         ttl,
                         proxied,
-                        comment
+                        tags
                     )
                 else:
                     logger.info(f"[DRY-RUN] Would create: {hostname} -> {ip_address}")

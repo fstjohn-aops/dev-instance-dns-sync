@@ -259,7 +259,16 @@ class DNSManager:
                 'content': ip_address,
                 'ttl': 60,  # 1 minute TTL
                 'proxied': False,  # DNS only, not proxied
-                'comment': f'Updated by test environment DNS sync on {timestamp}'
+                'tags': [
+                    {
+                        'name': 'updated-by',
+                        'value': 'test-environment-dns-sync'
+                    },
+                    {
+                        'name': 'last-updated',
+                        'value': timestamp
+                    }
+                ]
             }
             
             # Update the DNS record

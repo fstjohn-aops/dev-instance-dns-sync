@@ -96,7 +96,7 @@ You need a Cloudflare API token with the following permissions:
 
 - TTL: 60 seconds (1 minute)
 - Proxied: False (DNS only, not proxied through Cloudflare)
-- Comments: Include timestamp when records are updated
+- Tags: Include metadata about when and how records are updated
 
 ### Instance Filtering
 

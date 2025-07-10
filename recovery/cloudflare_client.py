@@ -77,7 +77,7 @@ class CloudflareClient:
             logger.error(f"Error fetching existing DNS records: {str(e)}")
             raise
     
-    def create_record(self, hostname: str, ip_address: str, ttl: int = 60, proxied: bool = False, comment: str = ""):
+    def create_record(self, hostname: str, ip_address: str, ttl: int = 60, proxied: bool = False, tags: list = None):
         """Create a new A record"""
         try:
             record_data = {
@@ -88,8 +88,8 @@ class CloudflareClient:
                 'proxied': proxied
             }
             
-            if comment:
-                record_data['comment'] = comment
+            if tags:
+                record_data['tags'] = tags
             
             self.cf.zones.dns_records.post(self.zone_id, data=record_data)
             logger.info(f"Created DNS record: {hostname} -> {ip_address}")
@@ -98,7 +98,7 @@ class CloudflareClient:
             logger.error(f"Error creating DNS record {hostname}: {str(e)}")
             raise
     
-    def update_record(self, record_id: str, hostname: str, ip_address: str, ttl: int = 60, proxied: bool = False, comment: str = ""):
+    def update_record(self, record_id: str, hostname: str, ip_address: str, ttl: int = 60, proxied: bool = False, tags: list = None):
         """Update an existing A record"""
         try:
             record_data = {
@@ -109,8 +109,8 @@ class CloudflareClient:
                 'proxied': proxied
             }
             
-            if comment:
-                record_data['comment'] = comment
+            if tags:
+                record_data['tags'] = tags
             
             self.cf.zones.dns_records.put(self.zone_id, record_id, data=record_data)
             logger.info(f"Updated DNS record: {hostname} -> {ip_address}")
