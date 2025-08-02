@@ -1,5 +1,9 @@
 #!/bin/bash
 
-# Run tests
+set -e
+
 echo "Running tests..."
-python -m pytest test/ -v 
+if [ -f venv/bin/activate ]; then
+  source venv/bin/activate
+fi
+pytest "$@"
