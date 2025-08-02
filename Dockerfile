@@ -27,4 +27,4 @@ RUN chown -R app:app /app
 USER app
 
 # Run the application
-CMD ["python", "app.py"] 
+CMD ["python", "src/app.py"] 
